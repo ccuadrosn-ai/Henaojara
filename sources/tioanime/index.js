@@ -22,11 +22,11 @@
   }
   function _retryFetch(url, options) {
     if (options && typeof options === 'object' && !options.signal) {
-      var t = (typeof options.timeout === 'number') ? options.timeout : 15000;
+      var t = (typeof options.timeout === 'number') ? options.timeout : 9000;
       if (t > 0) { options = Object.assign({}, options, { signal: _timeoutSignal(t) }); delete options.timeout; }
     }
     return new Promise(function (resolve, reject) {
-      var attempt = 0, retries = 2, base = 400, max = 3200;
+      var attempt = 0, retries = 1, base = 400, max = 1600;
       function go() {
         _f(url, options).then(function (res) {
           if (res && (res.status === 429 || res.status === 408 || (res.status >= 500 && res.status < 600)) && attempt < retries) {
@@ -76,6 +76,16 @@ const SKIP_HOSTS = [
   "terabox.com",
   "1fichier.com",
   "luluvdo.com", "lulustream.com",
+];
+
+// Hosts que nunca se resuelven directo (cuelgan o piden JS): se emiten
+// como embed sin descargar nada. Ahorra ~10-20s por episodio.
+const NO_FETCH_HOSTS = [
+  "amus", "mepu", "v.tioanime.com", // Amus/Mepu: cifrado propio / dominio caído
+  "maru", "my.mail.ru", "mail.ru",  // Maru: página pesada sin video extraíble
+  "mixdrop", "mixdroop",            // MixDrop: challenge JS
+  "vidguard", "vgfplay.com", "listeamed", // VidGuard: cuelga la conexión
+  "netu", "hqq", "hqq.tv",          // Netu: sirve video falso de 2018 a bots
 ];
 
 // Embeds que NuvioTV puede resolver con sus extractores CloudStream.
@@ -307,22 +317,28 @@ function cleanTitle(title) {
 }
 
 async function getTmdbTitles(tmdbId, type) {
+  // Las 3 en paralelo: secuencial tardaba 3x en el peor caso.
+  const langs = ["es-ES", "es-MX", "en-US"];
+  const results = await Promise.all(langs.map(lang =>
+    fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=${lang}`)
+      .then(r => r.json()).catch(() => null)
+  ));
+  const [resES, resMX, resEN] = results;
   let titleEsES = null, titleEsMX = null, titleOriginal = null, titleEn = null, year = null;
   try {
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=es-ES`).then(r => r.json());
-    titleEsES = type === "movie" ? res.title : res.name;
-    titleOriginal = type === "movie" ? res.original_title : res.original_name;
-    const dateStr = type === "movie" ? res.release_date : res.first_air_date;
-    if (dateStr) year = dateStr.split("-")[0];
-  } catch (e) { console.error("[TioAnime] TMDB es-ES error:", e.message); }
+    if (resES) {
+      titleEsES = type === "movie" ? resES.title : resES.name;
+      titleOriginal = type === "movie" ? resES.original_title : resES.original_name;
+      const dateStr = type === "movie" ? resES.release_date : resES.first_air_date;
+      if (dateStr) year = dateStr.split("-")[0];
+    }
+  } catch (e) {}
   try {
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=es-MX`).then(r => r.json());
-    titleEsMX = type === "movie" ? res.title : res.name;
-  } catch (e) { console.error("[TioAnime] TMDB es-MX error:", e.message); }
+    if (resMX) titleEsMX = type === "movie" ? resMX.title : resMX.name;
+  } catch (e) {}
   try {
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`).then(r => r.json());
-    titleEn = type === "movie" ? res.title : res.name;
-  } catch (e) { console.error("[TioAnime] TMDB en-US error:", e.message); }
+    if (resEN) titleEn = type === "movie" ? resEN.title : resEN.name;
+  } catch (e) {}
   return { titleEsES, titleEsMX, titleOriginal, titleEn, year };
 }
 
@@ -330,7 +346,8 @@ function generateQueries(info) {
   const queries = [];
   const addQuery = (q) => {
     if (!q) return;
-    const cleanQ = q.replace(/[,;.:!\?]/g, "").replace(/\s+/g, " ").trim();
+    const cleanQ = q.replace(/[,;.:!\?\/]/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleanQ) return;
     queries.push(cleanQ);
     const stripped = cleanQ.replace(/^(the|los|las|el|la|lo|un|una|unos|unas)\s+/i, "");
     if (stripped !== cleanQ) queries.push(stripped);
@@ -339,7 +356,17 @@ function generateQueries(info) {
   if (info.titleEsES && info.titleEsES !== info.titleEsMX) addQuery(info.titleEsES);
   if (info.titleEn) addQuery(info.titleEn);
   if (info.titleOriginal) addQuery(info.titleOriginal);
-  return [...new Set(queries)];
+  const uniq = [...new Set(queries)];
+  // Palabras clave: primer token de cada título sin puntuación ("Re:ZERO..." -> "ReZERO").
+  // El sitio busca por romaji; esto lo encuentra aunque TMDB no dé romaji.
+  // Tope de 8 queries para no alargar la búsqueda.
+  for (const base of [...uniq]) {
+    if (uniq.length >= 8) break;
+    const nospace = base.replace(/[,;.:!\?\/]/g, "");
+    const kw = (nospace.split(" ").find(w => w.length >= 4) || "").trim();
+    if (kw && !uniq.includes(kw)) uniq.push(kw);
+  }
+  return uniq;
 }
 
 async function searchOnSite(query) {
@@ -442,15 +469,29 @@ async function getStreams(tmdbId, mediaType, season, episode, title) {
   for (const q of uniqueQueries) {
     console.log(`[TioAnime] Searching with query: "${q}"`);
     const results = await searchOnSite(q);
+    const cleanedQ = cleanTitle(q);
     for (const res of results) {
       let score = 0;
       const cleanedResult = cleanTitle(res.title);
+      if (!cleanedResult) continue;
+      // La query que lo encontró también puntúa (cierra el hueco del romaji).
+      if (cleanedQ.length >= 4 && cleanedResult.includes(cleanedQ)) {
+        score = Math.max(score, 50);
+      }
       const matchTitles = [info.titleEsMX, info.titleEsES, info.titleOriginal, info.titleEn, title].filter(Boolean);
       for (const t of matchTitles) {
         const cleanedT = cleanTitle(t);
-        if (cleanedResult === cleanedT) score = Math.max(score, 100);
-        else if (cleanedResult.includes(cleanedT) || cleanedT.includes(cleanedResult)) score = Math.max(score, 50);
+        if (!cleanedT) continue; // japonés puro u otros: "" matchea todo
+        if (cleanedResult === cleanedT) {
+          score = Math.max(score, 100);
+        } else if (cleanedT.length >= 4 && cleanedResult.length >= 4 &&
+          (cleanedResult.includes(cleanedT) || cleanedT.includes(cleanedResult))) {
+          score = Math.max(score, 50);
+        }
       }
+      // Para series, penaliza películas/especiales con mismo nombre (ej. K-ON!).
+      if (!isMovie && /pelicula|movie|especial|ova|special/i.test(res.slug)) score -= 20;
+      if (isMovie && /pelicula|movie/i.test(res.slug)) score += 10;
       console.log(`  - Candidate: "${res.title}" -> Score: ${score} -> ${res.slug}`);
       if (score > bestScore && score >= 40) {
         bestScore = score;
@@ -505,6 +546,15 @@ async function getStreams(tmdbId, mediaType, season, episode, title) {
     const serverName = c.server;
     const embedUrl = c.url;
     if (!embedUrl) return null;
+    // Vía rápida: estos hosts nunca resuelven directo (cifrado propio,
+    // reproductores pesados de 200KB+ o muertos) — embed inmediato, 0 red.
+    const _nl = ((serverName || "") + " " + embedUrl).toLowerCase();
+    if (NO_FETCH_HOSTS.some(k => _nl.includes(k))) {
+      if (EMBED_SAFE_PATTERNS.some(h => embedUrl.includes(h))) {
+        return { provider: "TioAnime", title: `${serverName} (Embed)`, url: embedUrl, quality: "720p", isEmbed: true, headers: { "Referer": BASE_URL + "/", "User-Agent": UA } };
+      }
+      return null;
+    }
     try {
       const embedHost = new URL(embedUrl).hostname;
       if (SKIP_HOSTS.some(h => embedHost.includes(h) || embedUrl.includes(h))) {
@@ -516,7 +566,7 @@ async function getStreams(tmdbId, mediaType, season, episode, title) {
     console.log(`[TioAnime] Resolving server ${serverName}: ${embedUrl}`);
     let resolved = null;
     try {
-      resolved = await withTimeout(resolveUrl(serverName, embedUrl), 8000);
+      resolved = await withTimeout(resolveUrl(serverName, embedUrl), 6000);
       if (resolved === "TIMEOUT") {
         console.log(`[TioAnime] Timeout en ${serverName}, se emite embed si es seguro.`);
         resolved = null;
@@ -571,19 +621,19 @@ async function getStreams(tmdbId, mediaType, season, episode, title) {
 }
 
 /* __PLAYABLE_FILTER__ */
-// Si hay directos se devuelven solo esos; si no, se devuelven los embeds
-// para que NuvioTV los resuelva con sus extractores (nunca lista vacía).
+// Se devuelven directos + embeds (NuvioTV resuelve los embeds con sus
+// extractores). Solo se filtra basura sin URL o duplicados.
 var __filterPlayable = (function () {
   return function (sources) {
     var arr = sources || [];
-    var directs = [], embeds = [];
+    var seen = {}, out = [];
     for (var i = 0; i < arr.length; i++) {
       var s = arr[i];
-      if (!s) continue;
-      if (s.isEmbed) embeds.push(s);
-      else directs.push(s);
+      if (!s || !s.url || seen[s.url]) continue;
+      seen[s.url] = 1;
+      out.push(s);
     }
-    return directs.length ? directs : embeds;
+    return out;
   };
 })();
 module.exports = { getStreams };
