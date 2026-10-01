@@ -1,10 +1,10 @@
 {
-  "id": "latinuvio-henaojara",
-  "name": "Henaojara",
+  "id": "latinuvio-tioanime",
+  "name": "TioAnime",
   "version": "1.0.0",
-  "description": "Gran catálogo de anime en audio latino y castellano desde henaojara.net.",
+  "description": "Anime subtitulado en español desde tioanime.com (YourUpload, Okru, Netu y más).",
   "author": "latinokodi",
-  "logo": "https://ww1.henaojara.net/favicon.ico",
+  "logo": "https://tioanime.com/assets/img/icon-32x32.png",
   "types": [
     "source"
   ],

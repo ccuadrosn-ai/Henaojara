@@ -19,3 +19,6 @@ Thumbs.db
 # Temp
 *.tmp
 *.temp
+
+# Pruebas locales (HTML de depuración, no son parte del paquete)
+pruebas/
