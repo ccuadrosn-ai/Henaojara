@@ -274,9 +274,19 @@ async function resolveUrl(serverName, embedUrl) {
       if (html) resolved = findFirstUrl(html, [/sources?\s*:\s*\[\s*\{[^}]*(?:file|src)\s*:\s*["'](https?:\/\/[^"']+)["']/i, /"file"\s*:\s*"([^"]+)"/i, /"source"\s*:\s*"([^"]+)"/i, /file\s*:\s*'([^']+)'/i]);
       if (!isLikelyVideoUrl(resolved)) resolved = null;
     } else if (name.includes("okru") || name.includes("ok.ru") || name.includes("odnoklassniki")) {
-      const html = await fetchText(embedUrl);
+      const html = await fetchText(embedUrl, { "Referer": "https://ok.ru/" });
       if (html === "DEAD") return "DEAD";
-      if (html) resolved = findFirstUrl(html, [/"metadata"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"/i, /flashvars\s*=\s*\{[^}]*src\s*:\s*"([^"]+)"/i, /videoUrl\s*=\s*"([^"]+)"/i]);
+      if (html) {
+        // HLS directo en flashvars: hlsManifestUrl -> https://...video.m3u8?...
+        // Viene escapado como HTML (&quot;) y unicode (\/ \u0026).
+        const dec = html.replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+        const hls = dec.match(/hlsManifestUrl"\s*:\s*"([^"]+?\.m3u8[^"]*)"/i);
+        if (hls) {
+          resolved = hls[1].replace(/\\\//g, "/").replace(/\\u0026/gi, "&").replace(/\\/g, "");
+        } else {
+          resolved = findFirstUrl(html, [/"metadata"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"/i, /flashvars\s*=\s*\{[^}]*src\s*:\s*"([^"]+)"/i, /videoUrl\s*=\s*"([^"]+)"/i]);
+        }
+      }
       if (!isLikelyVideoUrl(resolved)) resolved = null;
     } else if (name.includes("streamtape")) {
       const html = await fetchText(embedUrl, { "Referer": BASE_URL + "/" });
