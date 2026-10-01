@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-sololatino",
+  "name": "SoloLatino",
+  "version": "1.0.0",
+  "description": "Películas y series en Latino desde sololatino.net. Resuelve vía embed69.",
+  "author": "latinokodi",
+  "logo": "https://sololatino.net/images/logo.png",
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

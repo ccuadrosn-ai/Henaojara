@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-homecine",
+  "name": "HomeCine",
+  "version": "1.0.0",
+  "description": "Películas y series de HomeCine (homecine.to).",
+  "author": "custom-latino",
+  "logo": "https://www3.homecine.to/favicon.ico",
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

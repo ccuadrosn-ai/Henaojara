@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-cine24h",
+  "name": "Cine24h",
+  "version": "1.0.0",
+  "description": "Películas y series en Español y Latino.",
+  "author": "latinokodi",
+  "logo": null,
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

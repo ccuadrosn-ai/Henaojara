@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-animeav1",
+  "name": "AnimeAV1",
+  "version": "1.0.0",
+  "description": "Portal de anime especializado con encode moderno y gran velocidad.",
+  "author": "latinokodi",
+  "logo": "https://animeav1.com/favicon.ico",
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

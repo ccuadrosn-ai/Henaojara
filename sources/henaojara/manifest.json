@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-henaojara",
+  "name": "Henaojara",
+  "version": "1.0.0",
+  "description": "Gran catálogo de anime en audio latino y castellano desde henaojara.net.",
+  "author": "latinokodi",
+  "logo": "https://ww1.henaojara.net/favicon.ico",
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "latinuvio-peliculasflix",
+  "name": "PeliculasFlix",
+  "version": "1.0.0",
+  "description": "Películas en Latino, Español y VOSE con API GraphQL.",
+  "author": "latinokodi",
+  "logo": null,
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

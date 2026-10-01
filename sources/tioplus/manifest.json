@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-tioplus",
+  "name": "TioPlus",
+  "version": "2.1.0",
+  "description": "Películas y series en HD (Latino) con bypass de doble Base64.",
+  "author": "latinokodi",
+  "logo": "https://tioplus.app/images/logo2.png",
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

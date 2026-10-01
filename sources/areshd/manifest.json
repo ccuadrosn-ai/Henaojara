@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-areshd",
+  "name": "AresHD",
+  "version": "1.1.0",
+  "description": "Películas y series en Latino y Español desde AresHD.",
+  "author": "latinokodi",
+  "logo": null,
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}

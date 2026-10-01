@@ -1,0 +1,23 @@
+{
+  "id": "latinuvio-vimeus",
+  "name": "Vimeus",
+  "version": "1.0.1",
+  "description": "Películas, series y anime en Latino/Español vía Vimeus. Múltiples servidores (VOE, StreamWish, Filemoon, etc).",
+  "author": "latinokodi",
+  "logo": null,
+  "types": [
+    "source"
+  ],
+  "resources": [
+    "stream"
+  ],
+  "contentTypes": [
+    "movie",
+    "series"
+  ],
+  "language": "es",
+  "formats": [
+    "m3u8",
+    "mp4"
+  ]
+}
