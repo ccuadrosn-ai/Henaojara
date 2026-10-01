@@ -46,8 +46,9 @@
   try { g.fetch = _retryFetch; } catch (e) {}
 })();
 
-const cheerio = require("cheerio");
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// Sin dependencias externas (cheerio no existe en el sandbox QuickJS/Hermes de Nuvio).
+// Todo el parseo HTML se hace con regex verificadas contra tioanime.com.
 
 const TMDB_KEY = "439c478a771f35c05022f9feabcca01c";
 const BASE_URL = "https://tioanime.com";
@@ -347,16 +348,15 @@ async function searchOnSite(query) {
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) return [];
     const html = await res.text();
-    const $ = cheerio.load(html);
+    // <article class="anime"><a href="/anime/slug">...<h3 class="title">Nombre</h3>
     const results = [];
-    $("article.anime").each((i, el) => {
-      const a = $(el).find("a[href^='/anime/']").first();
-      const href = a.attr("href") || "";
-      if (!href.startsWith("/anime/")) return;
-      const slug = href.replace("/anime/", "").replace(/\/$/, "");
-      const title = $(el).find("h3.title").first().text().trim();
+    const re = /<article class="anime">[\s\S]*?<a href="(\/anime\/[^"]+)"[\s\S]*?<h3 class="title">(.*?)<\/h3>/gi;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      const slug = m[1].replace("/anime/", "").replace(/\/$/, "").trim();
+      const title = m[2].replace(/<[^>]+>/g, "").trim();
       if (slug && title) results.push({ slug, title });
-    });
+    }
     return results;
   } catch (e) {
     console.error(`[TioAnime] Search site error for "${query}":`, e.message);
@@ -416,16 +416,26 @@ async function animeHasEpisode(slug, epNum) {
   } catch (_) { return true; }
 }
 
-async function getStreams(tmdbId, mediaType, season, episode) {
-  console.log(`[TioAnime] Resolving TMDB ID: ${tmdbId}, Season: ${season}, Episode: ${episode}`);
+async function getStreams(tmdbId, mediaType, season, episode, title) {
+  try {
+  console.log(`[TioAnime] Resolving TMDB ID: ${tmdbId}, Type: ${mediaType}, Season: ${season}, Episode: ${episode}`);
 
-  const info = await getTmdbTitles(tmdbId, mediaType);
-  if (!info.titleEsES && !info.titleEsMX && !info.titleOriginal && !info.titleEn) {
+  // Nuvio usa "series", TMDB usa "tv".
+  const tmdbType = mediaType === "series" ? "tv" : (mediaType || "tv");
+  const isMovie = mediaType === "movie";
+
+  const info = await getTmdbTitles(tmdbId, tmdbType);
+  let uniqueQueries = [];
+  if (info.titleEsES || info.titleEsMX || info.titleOriginal || info.titleEn) {
+    uniqueQueries = generateQueries(info);
+  } else if (title) {
+    // Fallback: si TMDB falla pero Nuvio nos dio el título, úsalo.
+    console.log(`[TioAnime] TMDB sin títulos, usando título directo: "${title}"`);
+    uniqueQueries = [String(title).replace(/[,;.:!\?]/g, "").replace(/\s+/g, " ").trim()];
+  } else {
     console.log("[TioAnime] Failed to fetch titles from TMDB.");
     return [];
   }
-
-  const uniqueQueries = generateQueries(info);
   let matchedAnime = null;
   let bestScore = -1;
 
@@ -435,7 +445,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
     for (const res of results) {
       let score = 0;
       const cleanedResult = cleanTitle(res.title);
-      const matchTitles = [info.titleEsMX, info.titleEsES, info.titleOriginal, info.titleEn].filter(Boolean);
+      const matchTitles = [info.titleEsMX, info.titleEsES, info.titleOriginal, info.titleEn, title].filter(Boolean);
       for (const t of matchTitles) {
         const cleanedT = cleanTitle(t);
         if (cleanedResult === cleanedT) score = Math.max(score, 100);
@@ -457,7 +467,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
 
   console.log(`[TioAnime] Matched Anime: "${matchedAnime.title}" (Score: ${bestScore}) -> ${matchedAnime.slug}`);
 
-  const epNum = mediaType === "movie" ? 1 : episode;
+  const epNum = isMovie ? 1 : episode;
   const episodeUrl = `${BASE_URL}/ver/${matchedAnime.slug}-${epNum}`;
 
   let episodeHtml = null;
@@ -485,72 +495,95 @@ async function getStreams(tmdbId, mediaType, season, episode) {
   }
   console.log(`[TioAnime] Found ${candidates.length} servers.`);
 
-  const streams = [];
-  for (const c of candidates) {
+  // Resolución en paralelo: secuencial tardaba 30s+ y Nuvio corta por timeout.
+  // Tope de 8s por servidor para no colgar el total.
+  const withTimeout = (p, ms) => Promise.race([
+    p,
+    new Promise((resolve) => setTimeout(() => resolve("TIMEOUT"), ms))
+  ]);
+  const settled = await Promise.allSettled(candidates.map(async (c) => {
     const serverName = c.server;
     const embedUrl = c.url;
-    if (!embedUrl) continue;
+    if (!embedUrl) return null;
     try {
       const embedHost = new URL(embedUrl).hostname;
       if (SKIP_HOSTS.some(h => embedHost.includes(h) || embedUrl.includes(h))) {
         console.log(`[TioAnime] Skipping host: ${embedHost} (${serverName})`);
-        continue;
+        return null;
       }
     } catch (_) {}
 
     console.log(`[TioAnime] Resolving server ${serverName}: ${embedUrl}`);
-    const resolved = await resolveUrl(serverName, embedUrl);
+    let resolved = null;
+    try {
+      resolved = await withTimeout(resolveUrl(serverName, embedUrl), 8000);
+      if (resolved === "TIMEOUT") {
+        console.log(`[TioAnime] Timeout en ${serverName}, se emite embed si es seguro.`);
+        resolved = null;
+      }
+    } catch (_) { resolved = null; }
 
     if (resolved === "DEAD") {
       console.log(`[TioAnime] Stream dead: ${embedUrl}`);
-      continue;
+      return null;
     }
     if (resolved) {
-      streams.push({
+      return {
         provider: "TioAnime",
         title: `${serverName} · Direct`,
         url: resolved,
         quality: "720p",
         headers: { "Referer": embedUrl, "User-Agent": UA }
-      });
-    } else {
-      const isEmbedSafe = EMBED_SAFE_PATTERNS.some(h => embedUrl.includes(h));
-      if (isEmbedSafe) {
-        streams.push({
-          provider: "TioAnime",
-          title: `${serverName} (Embed)`,
-          url: embedUrl,
-          quality: "720p",
-          isEmbed: true,
-          headers: { "Referer": BASE_URL + "/", "User-Agent": UA }
-        });
-      } else {
-        console.log(`[TioAnime] Dropping non-resolvable embed: ${embedUrl}`);
-      }
+      };
     }
-  }
+    const isEmbedSafe = EMBED_SAFE_PATTERNS.some(h => embedUrl.includes(h));
+    if (isEmbedSafe) {
+      return {
+        provider: "TioAnime",
+        title: `${serverName} (Embed)`,
+        url: embedUrl,
+        quality: "720p",
+        isEmbed: true,
+        headers: { "Referer": BASE_URL + "/", "User-Agent": UA }
+      };
+    }
+    console.log(`[TioAnime] Dropping non-resolvable embed: ${embedUrl}`);
+    return null;
+  }));
+
+  const streams = settled
+    .filter(r => r.status === "fulfilled" && r.value)
+    .map(r => r.value);
 
   console.log(`[TioAnime] Resolved ${streams.length} streams.`);
   const seen = new Set();
-  return streams.filter(s => {
+  const out = streams.filter(s => {
     if (!s || !s.url) return false;
     if (seen.has(s.url)) return false;
     seen.add(s.url);
     return true;
   });
+  return out;
+  } catch (e) {
+    console.error("[TioAnime] Fatal:", e && e.message);
+    return [];
+  }
 }
 
 /* __PLAYABLE_FILTER__ */
+// Si hay directos se devuelven solo esos; si no, se devuelven los embeds
+// para que NuvioTV los resuelva con sus extractores (nunca lista vacía).
 var __filterPlayable = (function () {
   return function (sources) {
     var arr = sources || [];
-    var out = [];
+    var directs = [], embeds = [];
     for (var i = 0; i < arr.length; i++) {
       var s = arr[i];
-      if (s && s.isEmbed) continue;
-      if (s) out.push(s);
+      if (!s) continue;
+      if (s.isEmbed) embeds.push(s);
+      else directs.push(s);
     }
-    return out;
+    return directs.length ? directs : embeds;
   };
 })();
 module.exports = { getStreams };
