@@ -1,196 +1,23 @@
 {
-  "id": "latinuvio-v2",
-  "name": "Latinuvio V2",
-  "version": "1.0.1",
-  "description": "Todos los providers de Latinuvio V2 como fuentes (m3u8/mp4, español latino).",
-  "logo": "https://raw.githubusercontent.com/latinokodi/latinuvio-V2/main/banner.png",
+  "id": "latinuvio-henaojara",
+  "name": "Henaojara",
+  "version": "1.0.0",
+  "description": "Gran catálogo de anime en audio latino y castellano desde henaojara.net.",
+  "logo": "https://ww1.henaojara.net/favicon.ico",
   "author": "latinokodi / community",
   "tags": [
     "español",
     "latino",
     "nuvio",
-    "latinuvio"
+    "henaojara",
+    "anime"
   ],
   "addons": [
-    {
-      "id": "latinuvio-embed69",
-      "path": "sources/embed69",
-      "type": "source",
-      "name": "Embed69"
-    },
-    {
-      "id": "latinuvio-pelisgo",
-      "path": "sources/pelisgo",
-      "type": "source",
-      "name": "PelisGo"
-    },
-    {
-      "id": "latinuvio-pelisplus",
-      "path": "sources/pelisplus",
-      "type": "source",
-      "name": "PelisPlusHD"
-    },
-    {
-      "id": "latinuvio-hackstore",
-      "path": "sources/hackstore",
-      "type": "source",
-      "name": "HackStore"
-    },
-    {
-      "id": "latinuvio-pelispanda",
-      "path": "sources/pelispanda",
-      "type": "source",
-      "name": "PelisPanda"
-    },
-    {
-      "id": "latinuvio-cinecalidad",
-      "path": "sources/cinecalidad",
-      "type": "source",
-      "name": "CineCalidad"
-    },
-    {
-      "id": "latinuvio-fuegocine",
-      "path": "sources/fuegocine",
-      "type": "source",
-      "name": "FuegoCine"
-    },
-    {
-      "id": "latinuvio-tioplus",
-      "path": "sources/tioplus",
-      "type": "source",
-      "name": "TioPlus"
-    },
-    {
-      "id": "latinuvio-lamovie",
-      "path": "sources/lamovie",
-      "type": "source",
-      "name": "LaMovie"
-    },
-    {
-      "id": "latinuvio-vimeus",
-      "path": "sources/vimeus",
-      "type": "source",
-      "name": "Vimeus"
-    },
-    {
-      "id": "latinuvio-areshd",
-      "path": "sources/areshd",
-      "type": "source",
-      "name": "AresHD"
-    },
-    {
-      "id": "latinuvio-cinemitas",
-      "path": "sources/cinemitas",
-      "type": "source",
-      "name": "Cinemitas"
-    },
-    {
-      "id": "latinuvio-cine24h",
-      "path": "sources/cine24h",
-      "type": "source",
-      "name": "Cine24h"
-    },
-    {
-      "id": "latinuvio-peliculasflix",
-      "path": "sources/peliculasflix",
-      "type": "source",
-      "name": "PeliculasFlix"
-    },
-    {
-      "id": "latinuvio-pelisgratishd",
-      "path": "sources/pelisgratishd",
-      "type": "source",
-      "name": "PelisGratisHD"
-    },
-    {
-      "id": "latinuvio-doramasflix",
-      "path": "sources/doramasflix",
-      "type": "source",
-      "name": "DoramasFlix"
-    },
-    {
-      "id": "latinuvio-verpelis",
-      "path": "sources/verpelis",
-      "type": "source",
-      "name": "VerPelis"
-    },
-    {
-      "id": "latinuvio-allpeliculasse",
-      "path": "sources/allpeliculasse",
-      "type": "source",
-      "name": "AllpeliculasSE"
-    },
-    {
-      "id": "latinuvio-elifilms",
-      "path": "sources/elifilms",
-      "type": "source",
-      "name": "EliFilms"
-    },
-    {
-      "id": "latinuvio-entrepeliculasyseries",
-      "path": "sources/entrepeliculasyseries",
-      "type": "source",
-      "name": "EntrePeliculasySeries"
-    },
-    {
-      "id": "latinuvio-megadedeoficial",
-      "path": "sources/megadedeoficial",
-      "type": "source",
-      "name": "MegaDedeOficial"
-    },
-    {
-      "id": "latinuvio-pelis182",
-      "path": "sources/pelis182",
-      "type": "source",
-      "name": "Pelis182"
-    },
-    {
-      "id": "latinuvio-animeav1",
-      "path": "sources/animeav1",
-      "type": "source",
-      "name": "AnimeAV1"
-    },
     {
       "id": "latinuvio-henaojara",
       "path": "sources/henaojara",
       "type": "source",
       "name": "Henaojara"
-    },
-    {
-      "id": "latinuvio-homecine",
-      "path": "sources/homecine",
-      "type": "source",
-      "name": "HomeCine"
-    },
-    {
-      "id": "latinuvio-pelisyseries",
-      "path": "sources/pelisyseries",
-      "type": "source",
-      "name": "PelisySeries"
-    },
-    {
-      "id": "latinuvio-monoschinos",
-      "path": "sources/monoschinos",
-      "type": "source",
-      "name": "MonosChinos"
-    },
-    {
-      "id": "latinuvio-sololatino",
-      "path": "sources/sololatino",
-      "type": "source",
-      "name": "SoloLatino"
-    },
-    {
-      "id": "latinuvio-pelisplushdnz",
-      "path": "sources/pelisplushdnz",
-      "type": "source",
-      "name": "PelisPlusHD NZ"
-    },
-    {
-      "id": "latinuvio-seriesmetro",
-      "path": "sources/seriesmetro",
-      "type": "source",
-      "name": "SeriesMetro"
     }
   ]
 }
